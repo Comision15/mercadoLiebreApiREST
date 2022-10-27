@@ -1,33 +1,46 @@
-const {validationResult} = require('express-validator');
-const {loadUsers, storeUsers} = require('../data/dbModule');
 const {hashSync} =require('bcryptjs');
-
+const db = require('../database/models');
+const {sendSequelizeError} = require('../helpers');
+const {sign} = require('jsonwebtoken');
 
 module.exports = {
-    processRegister : (req,res) => {
-        let errors = validationResult(req);
-        if(errors.isEmpty()){
+    processRegister : async (req,res) => {
+       try {
+            const {name, surname, email, password} = req.body;
 
-            let newUser = {
-                id :  loadUsers().length !== 0 ? loadUsers()[loadUsers().length - 1] + 1 : 1,
-                ...req.body,
-                pass : hashSync(req.body.pass, 10),
-                pass2 : null,
-                avatar : null
-            }
+            const {id, rolId} = await db.User.create({
+                name: name && name.trim(),
+                surname: surname && surname.trim(),
+                email : email && email.trim(),
+                password : password && password.trim(),
+                rolId : 2
+            });
 
-            let usersModify = [...loadUsers(), newUser];
+            const token = sign(
+                {
+                    id, 
+                    rolId
+                },
+                    process.env.SECRET_KEY_JWT,
+                {
+                    expiresIn : '1h'
+                }
+            )
 
-            storeUsers(usersModify)
-
-            return res.redirect('/users/login')
-
-        }else {
-            return res.render('userRegister',{
-                errors : errors.mapped(),
-                old : req.body
+            return res.status(201).json({
+                ok : true,
+                status : 201,
+                data : token
             })
-        }
+
+       } catch (error) {
+            
+        let errors = sendSequelizeError(error);
+            return res.status(error.status || 500).json({
+                ok : false,
+                errors 
+            })
+       }
     },
     processLogin : (req,res) => {
         let errors = validationResult(req);

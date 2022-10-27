@@ -23,16 +23,8 @@ module.exports = [
           }).catch( () => Promise.reject('El email ya se encuentra registrado'))
         })
         ,
-    check('pass')
+    check('password')
         .notEmpty()
         .withMessage('La contraseña es obligatoria'),
-    body('pass2')
-        .notEmpty()
-        .withMessage('Reingresá tu contraseña').bail()
-        .custom( (value, {req}) => {
-            return req.body.pass !== value ? false : true
-        }).withMessage('Las contraseñas no coinciden'),
-    check('terms')
-        .isString('on')
-        .withMessage('Debes aceptar las bases y condiciones'),
+
 ]

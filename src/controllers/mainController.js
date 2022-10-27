@@ -7,54 +7,9 @@ const toThousand = (n) => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
 const controller = {
 	index: (req, res) => {
-		// Do the magic
-		let productsInsale = db.Product.findAll({
-			where: {
-				discount: {
-					[Op.gte]: 12,
-				},
-			},
-			limit: 4,
-			order: [["discount", "DESC"]],
-			attributes: {
-				exclude: ["createdAt", "updatedAt", "categoryId"],
-			},
-			include: [
-				{
-					association: "category",
-					attributes: ["id", "name"],
-				},
-				{
-					association: "images",
-				},
-			],
-		});
-		let productsVisited = db.Product.findAll({
-			order: [["createdAt", "DESC"]],
-			limit: 4,
-			attributes: {
-				exclude: ["updatedAt", "categoryId"],
-			},
-			include: [
-				{
-					association: "category",
-					attributes: ["id", "name"],
-				},
-				{
-					association: "images",
-				},
-			],
-		});
-
-		Promise.all([productsInsale, productsVisited])
-			.then(([productsInSale, productsVisited]) => {
-				return res.render("index", {
-					productsVisited,
-					productsInSale,
-					toThousand,
-				});
-			})
-			.catch((error) => console.log(error));
+	
+		return res.render("index");
+		
 	},
 	search: (req, res) => {
 		// Do the magic
