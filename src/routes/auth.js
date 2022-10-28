@@ -3,11 +3,12 @@ const express = require('express');
 const router = express.Router();
 
 // ************ Controller Require ************
-const {processRegister, processLogin} = require('../controllers/authController');
+const {signUp, signIn} = require('../controllers/authController');
+const {uploadFile} = require('../middlewares');
 
 /* /users */
 router
-    .post('/register', processRegister)
-    .post('/login', processLogin)
+    .post('/signup', uploadFile.single('avatar'), signUp)
+    .post('/signin', signIn)
 
 module.exports = router;
