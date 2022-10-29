@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey : 'rolId'
       });
 
-      User.hasOne(models.Gender, {
+      User.belongsTo(models.Gender, {
         as : 'gender',
         foreignKey : 'genderId'
       });
@@ -50,7 +50,7 @@ module.exports = (sequelize, DataTypes) => {
       type : DataTypes.STRING,
       allowNull : false,
       validate : {
-        is : objectValidate(/^[a-zA-Z]+$/i,"Solo se aceptan caracteres alfabéticos"),
+        is : objectValidate(/^[a-zA-Zñíóúáéí\s]+$/i,"Solo se aceptan caracteres alfabéticos"),
         ...validationsModelsDefault,
       }
     },
@@ -58,7 +58,7 @@ module.exports = (sequelize, DataTypes) => {
       type : DataTypes.STRING,
       allowNull : false,
       validate : {
-         is : objectValidate(/^[a-zA-Z]+$/i,"Solo se aceptan caracteres alfabéticos"),
+         is : objectValidate(/^[a-zA-Zñíóúáéí\s]+$/i,"Solo se aceptan caracteres alfabéticos"),
          ...validationsModelsDefault,
       }
     },    
@@ -126,6 +126,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'User',
+    paranoid : true
   });
   return User;
 };
