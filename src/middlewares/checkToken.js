@@ -14,7 +14,7 @@ const checkToken = (req,res,next) => {
         verify(token, process.env.SECRET_KEY_JWT,  function(err, decoded) {
             if(err){
 
-                throw createError(401, "Token inválido")
+                throw createError(403, "Token inválido")
             }
             
                 req.userToken = decoded

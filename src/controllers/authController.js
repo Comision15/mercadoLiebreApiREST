@@ -15,6 +15,7 @@ module.exports = {
                 city,
                 province,
                 birthday,
+                genderId
             } = req.body;
 
             const { id, rolId } = await db.User.create({
@@ -24,6 +25,7 @@ module.exports = {
                 password: password && password.trim(),
                 birthday: birthday && birthday,
                 avatar: req.file && req.file.filename,
+                genderId,
                 rolId: 2,
             });
 
