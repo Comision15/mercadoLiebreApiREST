@@ -13,7 +13,11 @@ const controller = {
 
 		try {
 
-			let {limit} = req.query;
+			let {limit = 4, page = 1} = req.query;
+
+			limit = limit > 16 ? 16 : +limit;
+			page = +page;
+			let offset = +limit * (+page - 1);
 
 			let options = {
 				attributes : {
@@ -33,16 +37,26 @@ const controller = {
 						attributes : ['name']
 					}
 				],
-				limit : +limit || 4
+				limit,
+				offset
 			}
 
 			const {count, rows : products} = await db.Product.findAndCountAll(options);
+
+			const existPrev = page > 1;
+			const existNext = offset + limit < count;
+
+			const prev =  existPrev ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page - 1}&limit=${limit}` : null;
+			const next = existNext ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page + 1}&limit=${limit}` : null;
 
 			return res.status(200).json({
 				ok : true,
 				meta : {
 					total : count,
-					quantity : products.length
+					quantity : products.length,
+					page,
+					prev, 
+					next
 				},
 				data : products
 			})
