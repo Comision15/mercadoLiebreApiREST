@@ -3,16 +3,17 @@ const express = require('express');
 const router = express.Router();
 
 // ************ Controller Require ************
-const {index, store, detail, update, destroy} = require('../controllers/productsController');
+const {list, store, detail, update, destroy ,getImage} = require('../controllers/productsController');
 
 /* products */
 
 router
-    .get('/', index)
+    .get('/', list)
     .post('/', store)
     .get('/:id', detail)
     .put('/:id', update)
     .delete('/:id', destroy)
+    .get('/image/:image',getImage)
 
 
 module.exports = router;

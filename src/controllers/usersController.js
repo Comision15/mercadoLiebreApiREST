@@ -2,7 +2,7 @@ const {validationResult} = require('express-validator');
 const {loadUsers, storeUsers} = require('../data/dbModule');
 const {hashSync} =require('bcryptjs');
 const db = require('../database/models');
-const { sendSequelizeError } = require('../helpers');
+const { sendSequelizeError, createError } = require('../helpers');
 const { literal } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
@@ -124,7 +124,7 @@ module.exports = {
             await user.save();
             await address.save();
 
-             if(req.file && user.avatar !== "default.png" && user.avatar !== avatar){
+             if(req.file && avatar !== "default.png" && user.avatar !== avatar){
                 fs.existsSync(path.join(__dirname,'..','..','public','images','users',avatar)) && fs.unlinkSync(path.join(__dirname,'..','..','public','images','users',avatar))
             }
 
@@ -153,6 +153,58 @@ module.exports = {
     remove : async (req,res) => {
 
         try {
+
+            const {id, rolId} =req.userToken;
+            const {userId} = req.query;
+            let removeUser;
+            let removeAddress;
+
+            if(rolId == 1) {
+            
+                if(!userId){
+                    throw createError(404, 'Debes indicar el ID del usuario a eliminar');
+                }
+
+                if(userId == id){
+                    throw createError(404, 'No puedes autoeliminarte Richard!!!');
+                }
+
+                removeUser = await db.User.destroy({
+                    where : {
+                        id : userId
+                    }
+                });
+    
+                removeAddress = await db.Address.destroy({
+                    where : {
+                        userId
+                    }
+                });
+            }else {
+
+                removeUser = await db.User.destroy({
+                    where : {
+                        id
+                    }
+                });
+
+                removeAddress = await db.Address.destroy({
+                    where : {
+                        userId : id
+                    }
+            });
+        }
+
+            if(!removeUser){
+                throw createError(404, 'El usuario no existe para ser eliminado')
+            }
+
+
+            return res.status(200).json({
+                ok : true,
+                msg : 'Usuario eliminado con éxito',
+            })
+
             
         } catch (error) {
             let errors = sendSequelizeError(error);

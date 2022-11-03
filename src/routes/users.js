@@ -13,6 +13,6 @@ router
     .get('/profile', checkToken,  getProfile)
     .get('/avatar/:avatar',getAvatar)
     .patch('/update', uploadFile.single('avatar'),checkToken, setProfile)
-    .delete('/remove/:token', remove)
+    .delete('/remove',checkToken, remove)
 
 module.exports = router;
