@@ -13,11 +13,16 @@ const controller = {
 
 		try {
 
-			let {limit = 4, page = 1} = req.query;
+			let {limit = 4, page = 1, order = 'ASC', sortBy = 'id'} = req.query;
 
+			/* paginación */
 			limit = limit > 16 ? 16 : +limit;
 			page = +page;
 			let offset = +limit * (+page - 1);
+
+			/* ordenamiento */
+			order = ['ASC','DESC'].includes(order.toUpperCase()) ? order : 'ASC';
+			sortBy =  ['name', 'price', 'discount', 'category'].includes(sortBy.toLowerCase()) ? sortBy : 'id';
 
 			let options = {
 				attributes : {
@@ -34,11 +39,16 @@ const controller = {
 					},
 					{
 						association : 'category',
-						attributes : ['name']
+						attributes : ['name','id']
 					}
 				],
+				order : [
+					[sortBy,order]
+					
+				],
 				limit,
-				offset
+				offset,
+			
 			}
 
 			const {count, rows : products} = await db.Product.findAndCountAll(options);
@@ -46,8 +56,8 @@ const controller = {
 			const existPrev = page > 1;
 			const existNext = offset + limit < count;
 
-			const prev =  existPrev ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page - 1}&limit=${limit}` : null;
-			const next = existNext ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page + 1}&limit=${limit}` : null;
+			const prev =  existPrev ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page - 1}&limit=${limit}&order=${order}&sortBy=${sortBy}` : null;
+			const next = existNext ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page + 1}&limit=${limit}&order=${order}&sortBy=${sortBy}` : null;
 
 			return res.status(200).json({
 				ok : true,
