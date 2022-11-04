@@ -2,7 +2,7 @@ const db = require('../database/models');
 
 const {loadProducts,storeProducts} = require('../data/dbModule');
 const { sendSequelizeError } = require('../helpers');
-const { literal } = require('sequelize');
+const { literal, Op } = require('sequelize');
 const path = require('path');
 
 const toThousand = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -13,7 +13,7 @@ const controller = {
 
 		try {
 
-			let {limit = 4, page = 1, order = 'ASC', sortBy = 'id'} = req.query;
+			let {limit = 4, page = 1, order = 'ASC', sortBy = 'id', search = "", sale = 0} = req.query;
 
 			/* paginación */
 			limit = limit > 16 ? 16 : +limit;
@@ -22,11 +22,15 @@ const controller = {
 
 			/* ordenamiento */
 			order = ['ASC','DESC'].includes(order.toUpperCase()) ? order : 'ASC';
-			sortBy =  ['name', 'price', 'discount', 'category'].includes(sortBy.toLowerCase()) ? sortBy : 'id';
+			sortBy =  ['name', 'price', 'discount', 'category', 'newest'].includes(sortBy.toLowerCase()) ? sortBy : 'id';
 
-			let orderQuery = sortBy === "category" ? ['category','name',order] : [sortBy, order]
+			let orderQuery = sortBy === "category" ? ['category','name',order] : sortBy === "newest" ? ['createdAt', 'DESC'] : [sortBy, order]
 
 			let options = {
+				subQuery:false,
+				limit,
+				offset,
+				order : [orderQuery],
 				include : [
 					{
 						association : 'images',
@@ -45,20 +49,61 @@ const controller = {
 					exclude : ['createdAt', 'updatedAt','deletedAt'],
 					include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/',Product.id)`),'url']]
 				},
-				limit,
-				offset,
-				order : [orderQuery],
-				subQuery:false
+				where : {
+					[Op.or] : [
+						{
+							name : {
+								[Op.substring] : search
+							}
+						},
+						{
+							description : {
+								[Op.substring] : search
+							}
+						},
+						{
+							"$category.name$" : {
+								[Op.substring] : search
+							}
+						}
+					],
+					[Op.and] : [
+						{
+							discount : {
+								[Op.gte] : sale
+							}
+						}
+					]
+				}
+				
 			
 			}
 
 			const {count, rows : products} = await db.Product.findAndCountAll(options);
 
+
+			const queryKeys = {
+				limit,
+				order,
+				sortBy,
+				search,
+				sale
+			}
+
+			let queryUrl = "";
+
+			for (const key in queryKeys) {
+
+				queryUrl += `&${key}=${queryKeys[key]}`
+			
+			}
+
+
 			const existPrev = page > 1;
 			const existNext = offset + limit < count;
 
-			const prev =  existPrev ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page - 1}&limit=${limit}&order=${order}&sortBy=${sortBy}` : null;
-			const next = existNext ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page + 1}&limit=${limit}&order=${order}&sortBy=${sortBy}` : null;
+			const prev =  existPrev ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page - 1}${queryUrl}` : null;
+			const next = existNext ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page + 1}${queryUrl}` : null;
 
 			return res.status(200).json({
 				ok : true,
@@ -121,17 +166,6 @@ const controller = {
                 errors,
             });
 		}
-		
-		db.Product.findByPk(req.params.id,{
-			include : [{all : true}]
-		})
-			.then(product => {
-				return res.render('detail', {
-			product,
-			toThousand
-			})
-			})
-			.catch(error => console.log(error))
 		
 	},
 
