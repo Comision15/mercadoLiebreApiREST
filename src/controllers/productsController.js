@@ -24,30 +24,31 @@ const controller = {
 			order = ['ASC','DESC'].includes(order.toUpperCase()) ? order : 'ASC';
 			sortBy =  ['name', 'price', 'discount', 'category'].includes(sortBy.toLowerCase()) ? sortBy : 'id';
 
+			let orderQuery = sortBy === "category" ? ['category','name',order] : [sortBy, order]
+
 			let options = {
-				attributes : {
-					exclude : ['createdAt', 'updatedAt','deletedAt'],
-					include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/',Product.id)`),'url']]
-				},
 				include : [
 					{
 						association : 'images',
 						attributes : {
 							exclude : ['createdAt','updatedAt', 'deletedAt', 'id', 'file', 'productId'],
 							include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/image/',file)`),'url']]
-						}
+						},
 					},
 					{
 						association : 'category',
-						attributes : ['name','id']
+						attributes : ['name','id'],
+						
 					}
 				],
-				order : [
-					[sortBy,order]
-					
-				],
+				attributes : {
+					exclude : ['createdAt', 'updatedAt','deletedAt'],
+					include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/',Product.id)`),'url']]
+				},
 				limit,
 				offset,
+				order : [orderQuery],
+				subQuery:false
 			
 			}
 
