@@ -1,7 +1,7 @@
 const db = require('../database/models');
-
+const {validationResult} = require('express-validator')
 const {loadProducts,storeProducts} = require('../data/dbModule');
-const { sendSequelizeError } = require('../helpers');
+const { sendSequelizeError, createError } = require('../helpers');
 const { literal, Op } = require('sequelize');
 const path = require('path');
 
@@ -170,21 +170,85 @@ const controller = {
 	},
 
 	// Create -  Method to store
-	store: (req, res) => {
+	store: async (req, res) => {
 		// Do the magic
-		const {name, price,discount, description, category} = req.body;
+		try {
 
-		db.Product.create({
-			name : name.trim(),
-			price,
-			discount,
-			description,
-			categoryId : category
-		})
-			.then(product => {
-				return res.redirect('/products/detail/' + product.id)
+			let errors = validationResult(req);
+
+			if(!errors.isEmpty()){
+
+				let errorMessages = {}
+
+				for (const key in errors.mapped()) {
+					errorMessages = {
+						...errorMessages,
+						[key] : errors.mapped()[key].msg
+					}
+				}
+
+				let error = new Error()
+				error.status = 400;
+				error.message = errorMessages
+				throw error
+			}
+			
+
+
+			const {name, price, discount, description, category} = req.body;
+
+			const product = await db.Product.create({
+				name : name.trim(),
+				price,
+				discount,
+				description : description.trim(),
+				categoryId : category
+			});
+
+
+			if(req.files && req.files.length){
+				let images = req.files.map(file => {
+					return {
+						file : file.filename,
+						productId : product.id
+					}
+				});
+				
+				await db.Image.bulkCreate(images, {
+					validate : true
+				})
+			}
+
+			await product.reload({
+				include : [
+					{
+						association : 'images',
+						attributes : {
+							exclude : ['createdAt','updatedAt', 'deletedAt', 'id', 'file', 'productId'],
+							include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/image/',file)`),'url']]
+						}
+					},
+					{
+						association : 'category',
+						attributes : ['name']
+					}
+				]
 			})
-			.catch(error => console.log(error))
+
+			return res.status(201).json({
+				ok : true,
+				data : product
+			})
+
+
+		} catch (error) {
+			console.log(error)
+            return res.status(error.status || 500).json({
+                ok: false,
+                errors : error.message,
+            });
+		}
+		
 		
 	},
 	// Update - Method to update
