@@ -6,13 +6,13 @@ const router = express.Router();
 const {getProfile, setProfile, remove, getAvatar} = require('../controllers/usersController');
 
 /* midlewares */
-const {checkToken, uploadFile} = require('../middlewares')
+const {checkToken, uploadUser} = require('../middlewares');
 
 /* /users */
 router
     .get('/profile', checkToken,  getProfile)
     .get('/avatar/:avatar',getAvatar)
-    .patch('/update', uploadFile.single('avatar'),checkToken, setProfile)
+    .patch('/update', uploadUser.single('avatar'),checkToken, setProfile)
     .delete('/remove',checkToken, remove)
 
 module.exports = router;

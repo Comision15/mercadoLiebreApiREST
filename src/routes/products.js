@@ -4,13 +4,16 @@ const router = express.Router();
 
 // ************ Controller Require ************
 const {list, store, detail, update, destroy ,getImage} = require('../controllers/productsController');
-const { productAdd } = require('../validations');
 
+
+const { productAdd } = require('../validations');
+const {uploadProduct} = require('../middlewares')
+ 
 /* products */
 
 router
     .get('/', list)
-    .post('/', productAdd, store)
+    .post('/',uploadProduct.array('images'), productAdd, store)
     .get('/:id', detail)
     .put('/:id', update)
     .delete('/:id', destroy)

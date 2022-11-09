@@ -4,11 +4,11 @@ const router = express.Router();
 
 // ************ Controller Require ************
 const {signUp, signIn} = require('../controllers/authController');
-const {uploadFile} = require('../middlewares');
+const {uploadUser} = require('../middlewares');
 
 /* /users */
 router
-    .post('/signup', uploadFile.single('avatar'), signUp)
+    .post('/signup', uploadUser.single('avatar'), signUp)
     .post('/signin', signIn)
 
 module.exports = router;

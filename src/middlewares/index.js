@@ -1,7 +1,10 @@
+const { uploadProduct, uploadUser } = require('./uploadFile')
+
 module.exports = {
     localsUserCheck : require('./localsUserCheck'),
     userCheck : require('./userCheck'),
     cookieCheck : require('./cookieCheck'),
-    uploadFile : require('./uploadFile'),
-    checkToken : require('./checkToken')
+    checkToken : require('./checkToken'),
+    uploadProduct,
+    uploadUser
 }

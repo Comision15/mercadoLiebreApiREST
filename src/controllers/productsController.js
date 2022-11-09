@@ -4,6 +4,7 @@ const {loadProducts,storeProducts} = require('../data/dbModule');
 const { sendSequelizeError, createError } = require('../helpers');
 const { literal, Op } = require('sequelize');
 const path = require('path');
+const fs = require('fs');
 
 const toThousand = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
@@ -178,12 +179,29 @@ const controller = {
 
 			if(!errors.isEmpty()){
 
-				let errorMessages = {}
+				let errorMessages = {};
+				let errorsObject = errors.mapped();
 
-				for (const key in errors.mapped()) {
+				if(req.files){
+					req.files.forEach(file => {
+						fs.unlinkSync('public/images/products/' + file.filename)
+					})
+				} 
+
+				if(req.fileValidationError){
+					errorsObject = {
+						...errorsObject,
+						images : {
+							msg : req.fileValidationError
+						}
+					}
+				}
+
+				for (const key in errorsObject) {
+					console.log(key, [key])
 					errorMessages = {
 						...errorMessages,
-						[key] : errors.mapped()[key].msg
+						[key] : errorsObject[key].msg
 					}
 				}
 
@@ -193,8 +211,6 @@ const controller = {
 				throw error
 			}
 			
-
-
 			const {name, price, discount, description, category} = req.body;
 
 			const product = await db.Product.create({
