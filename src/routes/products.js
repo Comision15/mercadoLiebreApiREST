@@ -6,16 +6,16 @@ const router = express.Router();
 const {list, store, detail, update, destroy ,getImage} = require('../controllers/productsController');
 
 
-const { productAdd } = require('../validations');
+const { productValidator } = require('../validations');
 const {uploadProduct} = require('../middlewares')
  
 /* products */
 
 router
     .get('/', list)
-    .post('/',uploadProduct.array('images'), productAdd, store)
+    .post('/',uploadProduct.array('images'), productValidator, store)
     .get('/:id', detail)
-    .put('/:id', update)
+    .patch('/:id',uploadProduct.array('images'),productValidator, update)
     .delete('/:id', destroy)
     .get('/image/:image',getImage)
 

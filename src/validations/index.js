@@ -1,3 +1,3 @@
 module.exports = {
-    productAdd : require('./productAddValidator')
+    productValidator : require('./productValidator')
 }

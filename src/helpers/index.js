@@ -3,4 +3,5 @@ module.exports = {
     validationsModelsDefault : require('./validationsModelsDefault'),
     objectValidate : require('./objectValidate'),
     createError : require('./createError'),
+    createErrorExpress : require('./createErrorExpress')
 }

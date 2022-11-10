@@ -1,12 +1,31 @@
 const db = require('../database/models');
 const {validationResult} = require('express-validator')
 const {loadProducts,storeProducts} = require('../data/dbModule');
-const { sendSequelizeError, createError } = require('../helpers');
+const { sendSequelizeError, createError, createErrorExpress } = require('../helpers');
 const { literal, Op } = require('sequelize');
 const path = require('path');
 const fs = require('fs');
 
 const toThousand = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+const getOptions = (req) => {
+	return {
+		include : [
+			{
+				association : 'images',
+				attributes : {
+					exclude : ['createdAt','updatedAt', 'deletedAt', 'productId'],
+					include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/image/',file)`),'url']]
+				}
+			},
+			{
+				association : 'category',
+				attributes : ['name']
+			}
+		]
+	}
+	
+}
 
 const controller = {
 	// Root - Show all products
@@ -136,23 +155,8 @@ const controller = {
 		try {
 
 			const {id} = req.params;
-			const options = {
-				include : [
-					{
-						association : 'images',
-						attributes : {
-							exclude : ['createdAt','updatedAt', 'deletedAt', 'id', 'file', 'productId'],
-							include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/image/',file)`),'url']]
-						}
-					},
-					{
-						association : 'category',
-						attributes : ['name']
-					}
-				]
-			}
-
-			const product = await db.Product.findByPk(id, options);
+	
+			const product = await db.Product.findByPk(id, getOptions(req));
 
 			return res.status(200).json({
 				ok : true,
@@ -178,37 +182,7 @@ const controller = {
 			let errors = validationResult(req);
 
 			if(!errors.isEmpty()){
-
-				let errorMessages = {};
-				let errorsObject = errors.mapped();
-
-				if(req.files){
-					req.files.forEach(file => {
-						fs.unlinkSync('public/images/products/' + file.filename)
-					})
-				} 
-
-				if(req.fileValidationError){
-					errorsObject = {
-						...errorsObject,
-						images : {
-							msg : req.fileValidationError
-						}
-					}
-				}
-
-				for (const key in errorsObject) {
-					console.log(key, [key])
-					errorMessages = {
-						...errorMessages,
-						[key] : errorsObject[key].msg
-					}
-				}
-
-				let error = new Error()
-				error.status = 400;
-				error.message = errorMessages
-				throw error
+				throw createErrorExpress(errors, req)
 			}
 			
 			const {name, price, discount, description, category} = req.body;
@@ -235,26 +209,12 @@ const controller = {
 				})
 			}
 
-			await product.reload({
-				include : [
-					{
-						association : 'images',
-						attributes : {
-							exclude : ['createdAt','updatedAt', 'deletedAt', 'id', 'file', 'productId'],
-							include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/image/',file)`),'url']]
-						}
-					},
-					{
-						association : 'category',
-						attributes : ['name']
-					}
-				]
-			})
+			await product.reload(getOptions(req))
 
 			return res.status(201).json({
 				ok : true,
 				data : product
-			})
+			});
 
 
 		} catch (error) {
@@ -264,30 +224,64 @@ const controller = {
                 errors : error.message,
             });
 		}
-		
-		
 	},
 	// Update - Method to update
-	update: (req, res) => {
+	update: async (req, res) => {
 		// Do the magic
-		const {name, price,discount, description, category} = req.body;
-		let productsModify = loadProducts().map(product => {
-			if(product.id === +req.params.id){
-				return {
-					id : product.id,
-					name : name.trim(),
-					price : +price,
-					description : description.trim(),
-					discount : +discount,
-					category,
-					image : product.image
-				}
-			}
-			return product
-		});
+		try {
 
-		storeProducts(productsModify);
-		return res.redirect('/products/detail/' + req.params.id)
+			let errors = validationResult(req);
+
+			if(!errors.isEmpty()){
+				throw createErrorExpress(errors, req)
+			}
+
+			const {name, price,discount, description, category} = req.body;
+
+			const product = await db.Product.findByPk(req.params.id, getOptions(req));
+
+			product.name = name.trim() || product.name;
+			product.price = price || product.price;
+			product.discount = discount || product.discount;
+			product.description = description.trim() || product.description;
+			product.categoryId = category || product.categoryId;
+
+			let updated = await product.save();
+
+			if(req.files && req.files.length){
+				req.files.forEach(async (file, index) => {
+					if(product.images[index]){
+						fs.existsSync(path.join(__dirname,'..','..','public','images','products',product.images[index].file)) && fs.unlinkSync(path.join(__dirname,'..','..','public','images','products',product.images[index].file))
+
+						product.images[index].file = file.filename;
+						product.images[index].dataValues.url = `${req.protocol}://${req.get('host')}/products/image/${file.filename}`
+						await product.images[index].save();
+
+
+						/* product.images[index] = {
+							...product.images[index],
+							url :  `${req.protocol}://${req.get('host')}/products/image/${file.filename}`
+						} */
+
+						//console.log(product.images[index]);
+					}
+				});
+			}
+
+			return res.status(201).json({
+				ok : true,
+				data : product,
+				updated
+			});
+			
+		} catch (error) {
+			console.log(error)
+            return res.status(error.status || 500).json({
+                ok: false,
+                errors : error.message,
+            });
+		}
+
 	},
 
 	// Delete - Delete one product from DB
