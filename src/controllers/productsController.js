@@ -219,6 +219,7 @@ const controller = {
 
 		} catch (error) {
 			console.log(error)
+
             return res.status(error.status || 500).json({
                 ok: false,
                 errors : error.message,
@@ -238,7 +239,7 @@ const controller = {
 
 			const {name, price,discount, description, category} = req.body;
 
-			const product = await db.Product.findByPk(req.params.id, getOptions(req));
+			let product = await db.Product.findByPk(req.params.id, getOptions(req));
 
 			product.name = name.trim() || product.name;
 			product.price = price || product.price;
@@ -246,7 +247,7 @@ const controller = {
 			product.description = description.trim() || product.description;
 			product.categoryId = category || product.categoryId;
 
-			let updated = await product.save();
+			await product.save();
 
 			if(req.files && req.files.length){
 				req.files.forEach(async (file, index) => {
@@ -257,21 +258,14 @@ const controller = {
 						product.images[index].dataValues.url = `${req.protocol}://${req.get('host')}/products/image/${file.filename}`
 						await product.images[index].save();
 
-
-						/* product.images[index] = {
-							...product.images[index],
-							url :  `${req.protocol}://${req.get('host')}/products/image/${file.filename}`
-						} */
-
-						//console.log(product.images[index]);
 					}
 				});
 			}
 
+
 			return res.status(201).json({
 				ok : true,
 				data : product,
-				updated
 			});
 			
 		} catch (error) {
@@ -285,12 +279,37 @@ const controller = {
 	},
 
 	// Delete - Delete one product from DB
-	destroy : (req, res) => {
+	destroy : async (req, res) => {
 		// Do the magic
-		let productsModify = loadProducts().filter(product => product.id !== +req.params.id);
+
+		try {
+
+			let product = await db.Product.findByPk(req.params.id,getOptions(req));
+
+			if(product.images.length){
+				product.images.forEach(image => {
+					fs.existsSync(path.join(__dirname,'..','..','public','images','products',image.file)) && fs.unlinkSync(path.join(__dirname,'..','..','public','images','products',image.file))
+
+				});
+			}
+
+			await product.destroy()
+
+			return res.status(200).json({
+				ok : true,
+				msg : 'Producto eliminado con éxito!',
+			})
+
+			
+		} catch (error) {
+			console.log(error)
+            return res.status(error.status || 500).json({
+                ok: false,
+                errors : error.message,
+            });
+		}
 		
-		storeProducts(productsModify);
-		return res.redirect('/products')
+		
 
 	},
 	getImage : async (req,res) => {
