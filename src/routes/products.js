@@ -7,13 +7,14 @@ const {list, store, detail, update, destroy ,getImage} = require('../controllers
 
 
 const { productValidator } = require('../validations');
-const {uploadProduct} = require('../middlewares')
+const {uploadProduct, checkToken} = require('../middlewares');
+const checkAdminToken = require('../middlewares/checkAdminToken');
  
 /* products */
 
 router
-    .get('/', list)
-    .post('/',uploadProduct.array('images'), productValidator, store)
+    .get('/', checkToken, list)
+    .post('/',checkAdminToken, uploadProduct.array('images'), productValidator, store)
     .get('/:id', detail)
     .patch('/:id',uploadProduct.array('images'),productValidator, update)
     .delete('/:id', destroy)
